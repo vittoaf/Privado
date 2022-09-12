@@ -1,0 +1,28 @@
+{
+    "dag_id":"ue4_{env}_com_gco_mrel_010_dag_anl_comercial",
+    "create_disposition":"CREATE_NEVER",
+    "write_dispositions": [
+        {
+            "write_disposition": "WRITE_APPEND",
+            "scripts": [
+                "productividad",
+                "meta_ffvv"
+            ]
+        }
+    ],
+    "services_account":"svc-shr-al-anlyt-cc@rs-shr-al-analyticsz-prj-ebc1.iam.gserviceaccount.com",
+    "retries":"1",
+    "retry_delay":"1",
+    "dependencies_table":"`{project_id_raw}.de__datalake.config_dependencias_dag`",
+    "dag_dependencies": [
+        "ue4_{env}_com_gco_mrel_003_dag_stg_modelo_operaciones",
+        "ue4_{env}_com_gco_mrel_002_dag_stg_modelo_prospeccion",
+        "ue4_{env}_com_gco_mlake_005_dag_stg_modelo_producto",
+        "ue4_{env}_com_gco_mlake_006_dag_stg_modelo_persona",
+        "ue4_{env}_com_gco_mlake_016_dag_stg_modelo_comercial",
+        "ue4_{env}_com_gco_mrel_006_dag_stg_modelo_comercial_metas"
+    ],
+    "historico": "1",
+    "periodoinicio":"2018-01",
+    "mail_responsables": ["sarita.roman@rimac.com.pe", "GCP_Incidentes_Data@rimac.com.pe"]
+}

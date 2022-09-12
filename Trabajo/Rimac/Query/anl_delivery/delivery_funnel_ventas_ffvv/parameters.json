@@ -1,0 +1,25 @@
+{
+    "dag_id":"ue4_{env}_com_gco_mrel_017_dag_delivery_funnel_ventas_ffvv",
+    "create_disposition":"CREATE_NEVER",
+    "write_dispositions": [
+        {
+            "write_disposition": "WRITE_APPEND",
+            "scripts": [
+                "cr_funnel_ventas_ffvv",
+                "cr_funnel_ventas_rrvv"
+            ],
+            "configuration": {
+                "years": 4
+            }
+        }
+    ],
+    "services_account":"svc-shr-al-anlyt-cc@rs-shr-al-analyticsz-prj-ebc1.iam.gserviceaccount.com",
+    "retries":"1",
+    "retry_delay":"1",
+    "dependencies_table":"`{project_id_raw}.de__datalake.config_dependencias_dag`",
+    "dag_dependencies": [
+        "ue4_{env}_com_gco_mrel_016_dag_anl_comercial_funnel_ventas"
+    ],
+    "historico": "1",
+    "mail_responsables": ["sarita.roman@rimac.com.pe", "GCP_Incidentes_Data@rimac.com.pe"]
+}

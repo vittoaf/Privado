@@ -1,0 +1,30 @@
+{
+    "dag_id":"ue4_{env}_com_gco_mrel_002_dag_stg_modelo_prospeccion",
+    "create_disposition":"CREATE_NEVER",
+    "write_dispositions": [
+        {
+            "write_disposition": "WRITE_APPEND",
+            "scripts": [
+                "cotizacion_journey_tmp",
+                "cotizacion_cotweb_tmp",
+                "cotizacion_sas_tmp",
+                "cotizacion_finrisk_tmp",
+                "cotizacion_union_tmp",
+                "cotizacion",
+                "drop_tmps_cotizacion"
+            ]
+        }
+    ],
+    "services_account":"svc-prd-pdl-dd-stg-cc@rs-prd-dlk-dd-stging-f0e1.iam.gserviceaccount.com",
+    "retries":"1",
+    "retry_delay":"1",
+    "dependencies_table":"`{project_id_raw}.de__datalake.config_dependencias_dag`",
+    "dag_dependencies": [
+        "ue4_{env}_com_gco_mlake_005_dag_stg_modelo_producto",
+        "ue4_{env}_com_gco_mlake_006_dag_stg_modelo_persona",
+        "ue4_{env}_com_gco_mlake_007_dag_stg_modelo_poliza",
+        "ue4_{env}_com_gco_mlake_016_dag_stg_modelo_comercial",
+        "ue4_{env}_com_gco_mlake_022_dag_stg_modelo_comercial_bitacoras"
+    ],
+    "mail_responsables": ["sarita.roman@rimac.com.pe","GCP_Incidentes_Data@rimac.com.pe"]
+}

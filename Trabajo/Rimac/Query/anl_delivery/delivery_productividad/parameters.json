@@ -1,0 +1,24 @@
+{
+    "dag_id":"ue4_{env}_com_gco_mrel_011_dag_delivery_productividad",
+    "create_disposition":"CREATE_NEVER",
+    "write_dispositions": [
+        {
+            "write_disposition": "WRITE_APPEND",
+            "scripts": [
+                "cr_avance_ffvv_vida"
+            ],
+            "configuration": {
+                "years": 4
+            }
+        }
+    ],
+    "services_account":"svc-shr-al-anlyt-cc@rs-shr-al-analyticsz-prj-ebc1.iam.gserviceaccount.com",
+    "retries":"1",
+    "retry_delay":"1",
+    "dependencies_table":"`{project_id_raw}.de__datalake.config_dependencias_dag`",
+    "dag_dependencies": [
+        "ue4_{env}_com_gco_mrel_010_dag_anl_comercial"
+    ],
+    "historico": "1",
+    "mail_responsables": ["sarita.roman@rimac.com.pe","GCP_Incidentes_Data@rimac.com.pe"]
+}
