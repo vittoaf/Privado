@@ -5,7 +5,12 @@
 
 CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_vitto`
 AS
-WITH persona_data
+WITH 
+NuevoCalendario as (
+SELECT Periodo,FecCierre,FecSuscripcion,FecEmision
+ FROM `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.NuevoCalendario_Vitto`
+),
+persona_data
 AS (
 	SELECT 
 		a.id_persona,
@@ -349,6 +354,50 @@ stg_tramite AS (
 		a.des_estado_solicitud,
 		a.id_persona_via,
         a.id_sede_via,
+
+		CASE WHEN DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month) < '2021-06-01' THEN 
+			CASE
+				WHEN COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision) IS NULL
+					AND m.fec_fin_solicitud >= SAFE_CAST(COALESCE(a.fecsolicitud,a.feccreacion) AS DATE)
+					AND m.fec_fin_tramite >= SAFE_CAST(a.feccreacion AS DATE)
+				THEN DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month)
+				WHEN COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision) IS NOT NULL
+					AND m.fec_fin_solicitud >= SAFE_CAST(COALESCE(a.fecsolicitud,a.feccreacion) AS DATE)
+					AND m.fec_fin_tramite >= SAFE_CAST(a.feccreacion AS DATE)
+					AND m.fec_fin_emision >= COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision)
+				THEN DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month)
+				WHEN COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision) IS NOT NULL
+					AND m.fec_fin_solicitud >= SAFE_CAST(COALESCE(a.fecsolicitud,a.feccreacion) AS DATE)
+					AND m.fec_fin_tramite >= SAFE_CAST(a.feccreacion AS DATE)
+					AND m.fec_fin_emision < COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision)
+					AND m1.fec_fin_emision >= COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision)
+				THEN DATE_ADD(DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month), INTERVAL 1 MONTH)
+				WHEN COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision) IS NOT NULL
+					AND m.fec_fin_solicitud >= SAFE_CAST(COALESCE(a.fecsolicitud,a.feccreacion) AS DATE)
+					AND m.fec_fin_tramite >= SAFE_CAST(a.feccreacion AS DATE)
+					AND m.fec_fin_emision < COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision)
+					AND m1.fec_fin_emision < COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision)
+					AND m2.fec_fin_emision >= COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision)
+				THEN DATE_ADD(DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month), INTERVAL 2 MONTH)
+				WHEN m.mes_produccion IS NULL
+				THEN DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month)
+				ELSE DATE_ADD(DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month), INTERVAL 1 MONTH)
+			END 
+		ELSE
+			CASE 
+				WHEN COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision) IS NOT NULL
+				THEN DATE_TRUNC(SAFE_CAST(COALESCE(e.fec_emision,pu.fec_emision,a.fecha_emision) AS DATE), month)
+			ELSE
+				CASE 
+          WHEN SAFE_CAST(a.feccreacion AS DATE) <= (Select CAST(N.FecCierre AS DATE) from NuevoCalendario N 
+																where DATE_TRUNC(SAFE_CAST(a.feccreacion AS TIMESTAMP), month)= N.Periodo)
+				  THEN DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month)
+				ELSE
+          DATE_ADD(DATE_TRUNC(SAFE_CAST(a.feccreacion AS DATE), month),INTERVAL 1 MONTH)
+				END
+			END
+		END mes_produccion_modificado,
+
 		CURRENT_DATE() AS fec_insercion,
 		CURRENT_DATE() AS fec_modificacion,
 		a.BQ__SOFT_DELETED AS bq__soft_deleted
@@ -438,6 +487,7 @@ SELECT
     trm.des_estado_solicitud,
     trm.id_persona_via,
     trm.id_sede_via,
+	mes_produccion_modificado,
 	trm.fec_insercion,
 	trm.fec_modificacion,
 	trm.bq__soft_deleted

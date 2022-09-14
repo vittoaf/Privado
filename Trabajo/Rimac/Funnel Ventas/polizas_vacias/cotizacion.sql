@@ -1,7 +1,7 @@
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto`;
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto_anterior`;
 
-CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto_anterior`
+CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto`
 AS
 WITH persona_data AS (
 	SELECT 
@@ -289,7 +289,7 @@ SELECT
 FROM 
 	--`rs-nprd-dlk-dt-stg-msrl-d0d7.stg_modelo_prospeccion.cotizacion_union_tmp` a
 	--`rs-nprd-dlk-dd-stgz-8ece.stg_modelo_prospeccion.cotizacion_union_tmp` a
-	`rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_union_tmp_vitto_anterior` a
+	`rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_union_tmp_vitto` a
 
 	--LEFT JOIN `rs-nprd-dlk-dt-stg-mlk-3d01.stg_modelo_producto.producto` pro
 	--LEFT JOIN `rs-nprd-dlk-dd-stgz-8ece.stg_modelo_producto.producto` pro

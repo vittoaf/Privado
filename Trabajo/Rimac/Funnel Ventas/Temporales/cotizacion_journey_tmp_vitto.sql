@@ -206,7 +206,26 @@ SELECT
 	END AS Periodo,
 	--Variables nuevas para COTSAS: Inicio
 	SAFE_CAST('FUERZA DE VENTA' AS STRING) AS canal,
-	SAFE_CAST(NULL AS STRING) AS id_tramite
+	SAFE_CAST(NULL AS STRING) AS id_tramite,
+
+	CASE
+		WHEN ((b.id_estado > 0) AND (b.id_estado < 4) AND (pre.id_precotizacion IS NOT NULL)) 
+			THEN 4
+		ELSE 
+			CASE 
+				WHEN b.id_estado = 1  THEN 1 
+				WHEN b.id_estado = 2  THEN 2 
+				WHEN b.id_estado = 3  THEN 3 
+				WHEN b.id_estado = 4  THEN 5 
+				WHEN b.id_estado = 12 THEN 6 
+				WHEN b.id_estado = 6  THEN 7
+				WHEN b.id_estado = 7  THEN 8
+				WHEN b.id_estado = 5  THEN 9 
+				WHEN b.id_estado = 0  THEN 10   
+			END 
+	END AS id_estado_asesoria_orden
+
+
 	--Variables nuevas para COTSAS: Fin
 FROM 
 	--`rs-nprd-dlk-data-rwz-51a6.ue2dbaprodrdjovv001__db_journeyvv.jvv_bitacora` b

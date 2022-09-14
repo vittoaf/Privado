@@ -45,7 +45,7 @@ t_producto AS (
 t_tramite_nuevas_polizas_renov as (
 	SELECT 		
 	  	t.numtramite ,
-		ARRAY_AGG(t.mes_produccion ORDER BY t.mnt_prima_emitida_bruta_anualizada DESC)[OFFSET(0)] as mes_produccion ,
+		ARRAY_AGG(t.mes_produccion_modificado ORDER BY t.mnt_prima_emitida_bruta_anualizada DESC)[OFFSET(0)] as mes_produccion ,
 		ARRAY_AGG(t.periodo_creacion ORDER BY t.mnt_prima_emitida_bruta_anualizada DESC)[OFFSET(0)] as periodo_creacion ,
 		ARRAY_AGG(t.origen_data ORDER BY t.mnt_prima_emitida_bruta_anualizada DESC)[OFFSET(0)] as origen_data ,
 		ARRAY_AGG(t.id_intermediario ORDER BY t.mnt_prima_emitida_bruta_anualizada DESC)[OFFSET(0)] as id_intermediario ,
