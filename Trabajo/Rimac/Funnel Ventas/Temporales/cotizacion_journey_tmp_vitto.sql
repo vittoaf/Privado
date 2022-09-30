@@ -99,7 +99,8 @@ SELECT
 	cot.frecuencia_pago,
 	pre.cod_prod,
 	CASE
-		WHEN cot.estado = 3 THEN CAST(IFNULL(cot.numero_poliza,cot.id_cotizacion) AS STRING)
+		--WHEN cot.estado = 3 THEN CAST(IFNULL(cot.numero_poliza,cot.id_cotizacion) AS STRING)
+		WHEN cot.estado = 3 THEN COALESCE(numero_poliza_ae, CAST(cot.numero_poliza AS STRING) ,CAST(cot.id_cotizacion AS STRING) ) 
 	END AS cot_nro_poliza,
 	pag.id_pago,
 	pripag.importe importepp,

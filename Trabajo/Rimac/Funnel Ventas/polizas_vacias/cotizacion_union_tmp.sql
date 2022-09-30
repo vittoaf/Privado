@@ -16,7 +16,8 @@ SELECT
 	MAX(j.origen_data) AS origen_data,
 	ARRAY_AGG(j.fecha_registro ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS fecha_registro,
 	ARRAY_AGG(j.producto_recomendado ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS producto_recomendado,
-	ARRAY_AGG(j.codproducto_final ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS codproducto_final,
+	j.codproducto_final codproducto_final,
+	--ARRAY_AGG(j.codproducto_final ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS codproducto_final,
 	ARRAY_AGG(j.id_estado_cotizacion ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS id_estado_cotizacion,
 	ARRAY_AGG(j.des_estado_cotizacion ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS des_estado_cotizacion,
 	ARRAY_AGG(j.semaforo_precotizacion ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS semaforo_precotizacion,
@@ -43,7 +44,8 @@ SELECT
 	MAX(j.fec_actualizacion_estado_asesoria) AS fec_actualizacion_estado_asesoria,
 	--Variables nuevas para COTSAS
 	ARRAY_AGG(j.canal ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS canal,
-	ARRAY_AGG(j.cot_nro_poliza ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS numpol,
+	j.cot_nro_poliza as numpol,
+	--ARRAY_AGG(j.cot_nro_poliza ORDER BY j.id_estado_asesoria_orden DESC, j.id_estado_cotizacion DESC, j.fechora_actualizacion_estado_asesoria DESC)[OFFSET(0)] AS numpol,
 	--Variables nuevas para COTSAS
 	SAFE_CAST(NULL AS FLOAT64) AS tasa_venta,
 	periodo
@@ -58,6 +60,8 @@ GROUP BY
 	j.tip_doc_asesor,
 	j.nro_doc_cliente,
 	j.tip_doc_cliente,
+	j.codproducto_final,---agregado cvaf
+	j.cot_nro_poliza,---agregado cvaf
 	periodo
 
 UNION ALL

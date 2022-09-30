@@ -1,52 +1,145 @@
---DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_union_tmp_vitto_anterior`;
---DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_union_tmp_vitto`;
- Select * from `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_union_tmp_vitto`
-where nro_doc_cliente = '47443265';
-	
-SELECT
-	id_cotizacion_origen  AS id_cotizacion_origen,
-	origen_lead_cliente  AS origen_lead_cliente,
-	j.codigo_asesor,
-	j.email_asesor,
-	j.nro_doc_asesor,
-	j.tip_doc_asesor,
-	j.nro_doc_cliente,
-	j.tip_doc_cliente,
-	origen_data AS origen_data,
-	fecha_registro   AS fecha_registro,
-	producto_recomendado  AS producto_recomendado,
-	codproducto_final  AS codproducto_final,
-	id_estado_cotizacion  AS id_estado_cotizacion,
-	des_estado_cotizacion  AS des_estado_cotizacion,
-	semaforo_precotizacion  AS semaforo_precotizacion,
-	semaforo_cotizacion  AS semaforo_cotizacion,
-	id_asesoria_origen  AS id_asesoria_origen,
-	id_estado_asesoria  AS id_estado_asesoria,
-	des_estado_asesoria  AS des_estado_asesoria,
-	des_moneda_presentada  AS des_moneda_presentada,
-	/*BEGIN: Se agrego para logica de flg_presentada*/
-	frecuencia_pago  AS frecuencia_pago,
-	cod_prod  AS cod_prod,
-	id_pago  AS id_pago,
-	importepp  AS importepp,
-	importep  AS importep,
-	importe  AS importe,
-	monto_pago  AS monto_pago,
-	prima_ahorro  AS prima_ahorro,
-	monto_descuento AS monto_descuento,
-	importe_cot AS importe_cot,
-	/*END: Se agrego para logica de flg_presentada*/
-	prima_anual_usd AS prima_anual_usd,
-	pago_flg AS pago_flg,
-	fec_crea_pago AS fec_crea_pago,
-	fec_actualizacion_estado_asesoria AS fec_actualizacion_estado_asesoria,
-	--Variables nuevas para COTSAS
-	canal AS canal,
-	cot_nro_poliza AS numpol,
-	--Variables nuevas para COTSAS
-	SAFE_CAST(NULL AS FLOAT64) AS tasa_venta,
-	periodo
-FROM 
-	`rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_journey_tmp_vitto` j
-  where j.nro_doc_cliente = '47443265' --'45106974'
+WITH 
+NuevoCalendario as (
+SELECT Periodo,FecCierre,FecSuscripcion,FecEmision
+ FROM `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.NuevoCalendario_Vitto`
+),
+persona_data
+AS (
+	SELECT 
+		a.id_persona,
+        ARRAY_AGG(b.num_documento		ORDER BY left(a.id_persona,2),a.id_persona DESC)[OFFSET(0)] AS num_documento,
+        ARRAY_AGG(a.nom_completo		ORDER BY left(a.id_persona,2),a.id_persona DESC)[OFFSET(0)] AS nom_completo,
+		ARRAY_AGG(a.cod_acselx			ORDER BY left(a.id_persona,2),a.id_persona DESC)[OFFSET(0)] AS cod_ax
+	FROM `rs-nprd-dlk-dd-stgz-8ece.stg_modelo_persona.persona` a
+    CROSS JOIN UNNEST (a.documento_identidad) b
+	WHERE 
+		b.ind_documento_principal = '1' -- 1: DNI. Si se desea todos los documentos asociados, se quita este filtro.
+		AND UPPER(TRIM(b.tip_documento))='DNI'
+		AND IFNULL(a.bq__soft_deleted,false)=false
+	GROUP BY a.id_persona
+),
+producto_data
+AS
+(
+	select
+	P.id_producto,
+	MAX(coalesce(if(PO.id_origen='AX',PO.cod_producto,null),P.cod_producto)) as cod_producto,
+	FROM `rs-nprd-dlk-dd-stgz-8ece.stg_modelo_producto.producto` P,
+	UNNEST (P.producto_origen) as PO
+	GROUP BY P.id_producto
+),
+producto_ax_data
+AS
+(
+	select
+	coalesce(if(PO.id_origen='AX',PO.cod_producto,null),P.cod_producto) as cod_producto,
+	MAX(P.id_producto) AS id_producto
+	FROM `rs-nprd-dlk-dd-stgz-8ece.stg_modelo_producto.producto` P,
+	UNNEST (P.producto_origen) as PO
+	GROUP BY coalesce(if(PO.id_origen='AX',PO.cod_producto,null),P.cod_producto)
+),
+-- Actualizar el intermediario para el caso de los tramites historicos de RRVV
+jerarquia_ffvv_data_xcodsap AS (
+	SELECT
+		CAST(jfv.cod_sap AS STRING) AS cod_sap ,
+		max(jfv.id_intermediario_rimac) AS id_intermediario_rimac   -- campo string
+	FROM 
+		--`rs-nprd-dlk-dt-stg-mlk-3d01.stg_modelo_comercial.bitacora_jerarquia_fuerza_ventas` jfv
+		`rs-nprd-dlk-dd-stgz-8ece.stg_modelo_comercial.bitacora_jerarquia_fuerza_ventas` jfv		
+	WHERE 
+		LOWER(jfv.dsc_tipo_puesto)='asesor'
+        AND jfv.cod_sap <> 0
+	GROUP BY 
+		CAST(jfv.cod_sap AS STRING)
+),
+tramites_hist_rentas as (
+    SELECT thr.nro_tramite_solicitud AS numtramite ,
+           trim(thr.cod_sap_asesor_final) AS cod_sap_asesor_final ,
+           jfv.id_intermediario_rimac AS id_intermediario ,
+           trim(cast(cod_producto_final AS STRING))  AS  cod_producto_final 
+    --FROM `rs-nprd-dlk-data-rwz-51a6.de__canales.tramites_hist_rentas` thr 
+	FROM `rs-nprd-dlk-dd-rwz-a406.de__canales.tramites_hist_rentas` thr 
+    LEFT JOIN jerarquia_ffvv_data_xcodsap jfv ON ( jfv.cod_sap  = TRIM(thr.cod_sap_asesor_final) )
+    WHERE TRIM(CAST(cod_producto_final AS STRING)) IN ('8822','8827','8102','8917','8901')  -- solo productos del funnel de Rentas 
+	  AND COALESCE( SAFE_CAST(thr.cod_sap_asesor_final AS NUMERIC) || '' , '') <> ''  -- que presente un codigo sap correcto
+      AND thr.nro_tramite_solicitud <> 'PENDIENTE'
+),
+tmp_tramite AS (
+SELECT 
+		trm.numtramite,
+		'LOTUS' AS origen_data,
+		trm.feccreacion,
+		trm.tipotramite,
+		trm.tipooperacion,
+		trm.glosa,
+		trm.fecsolicitud,
+		trm.areatramite,
+		trm.emisorencargado,
+		trm.BQ__SOFT_DELETED,
+		trm.numidcliente, 
+		CONCAT('AX-', SAFE_CAST(SAFE_CAST(trm.numidcliente AS numeric) AS string)) AS id_contratante, 
+		trm.doccliente,
+		trm.nomcliente,
+		trm.codproducto,
+		pro.id_producto AS id_producto, 
+		-- identificador del intermediario o broker
+		CASE 
+			WHEN thr.numtramite IS NOT NULL THEN thr.id_intermediario   -- caso de los tramites de rentas historicos.
+			WHEN UPPER(trm.nombroker) = 'SEGUROS DIRECTOS' THEN '43' 	-- hay casos que vienen con '00043' o '0'
+			ELSE SAFE_CAST(SAFE_CAST(TRIM(trm.numidbroker) AS numeric) AS string) 
+		END AS numidbroker,
+		--
+		TRIM(trm.numpoliza) as numpoliza,
+		CASE 
+			WHEN INSTR(TRIM(trm.numpoliza),'|') > 0 THEN TRIM(SUBSTRING(TRIM(trm.numpoliza),INSTR(TRIM(trm.numpoliza),'|')+1,20))
+			WHEN INSTR(TRIM(trm.numpoliza),' ') > 0 THEN SAFE_CAST(SAFE_CAST(TRIM(SUBSTRING(TRIM(trm.numpoliza),INSTR(TRIM(trm.numpoliza),' ')+1,20)) AS numeric) AS string)
+			WHEN SUBSTRING(TRIM(trm.numpoliza),1,1) = '0' THEN SAFE_CAST(SAFE_CAST(trm.numpoliza AS numeric) AS string)
+			WHEN SUBSTRING(TRIM(trm.numpoliza),1,1) in ('V','U') THEN TRIM(regexp_replace(TRIM(trm.numpoliza),'[^0-9 ]',''))
+			ELSE TRIM(trm.numpoliza) 
+		END numpoliza_buscar, -- numero de poliza a buscar 
+		trm.canalventa,
+		CASE 
+			WHEN trm.canalventa='FFVV' THEN 'FUERZA DE VENTA'
+			WHEN trm.canalventa='Directo' THEN 'DIRECTO'
+			WHEN trm.canalventa='Broker' THEN 'CORREDORES'
+			ELSE 'NO DETERMINADO'
+		END AS canalventa_homologado,
+        cast(null as string) AS Id_Moneda,
+        cast(null as NUMERIC) AS mnt_prima_emitida_bruta_anualizada,
+        cast(null as DATE) AS Fecha_Emision,
+        cast(null as string) AS cod_cluster,
+		cast(null as string) AS des_cluster,
+        cast(null as string) AS est_estado_solicitud,
+        cast(trm.ESTADO as string) AS des_estado_solicitud,
+        cast(null as string) AS id_persona_via,
+        cast(null as  string) AS id_sede_via
+	FROM `rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
+	LEFT JOIN tramites_hist_rentas thr on ( thr.numtramite = trm.numtramite )  -- tramites historicos de rentas
+	LEFT JOIN producto_ax_data pro ON (pro.cod_producto=trim(trm.codproducto))
+	WHERE 
+		--1 = 1 -- (diferente de 8202) or (diferente glosa de journey express para 8917)
+		 /*(case 
+		 	WHEN trm.codproducto = '8917' AND trm.glosa LIKE '%JOURNEY EXPRESS%' THEN 0
+  			WHEN trm.codproducto = '8202' THEN 0
+  			ELSE 1 END) = 1*/
+     trm.doccliente = '77272512')
+  select origen_data,numtramite,tipooperacion,glosa,numidbroker,id_producto,numpoliza from tmp_tramite
 
+  -----
+
+  select codproducto_final,origen_data,nro_doc_cliente,id_estado_cotizacion
+,des_estado_cotizacion,canal,cot_nro_poliza  from 
+`rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_journey_tmp_vitto`
+where (nro_doc_cliente = '29554615' and codproducto_final = '8202')
+or (nro_doc_cliente = '001739744' and codproducto_final = '8917')
+or (nro_doc_cliente = '10064074' and codproducto_final = '8102')
+;
+
+Select * from `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_cotweb_tmp_vitto` 
+where (nro_doc_cliente = '10064074' and codproducto_final = '8102')
+;
+
+select codproducto_final,origen_data,nro_doc_cliente,codproducto_final,id_estado_cotizacion
+,des_estado_cotizacion,pago_flg,numpol,canal,periodo from
+`rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_union_tmp_vitto`
+where nro_doc_cliente = '10064074'

@@ -1,9 +1,10 @@
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.funnel_ventas_vitto`;
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.funnel_ventas_vitto_anterior`;
 
-DECLARE var_periodo_proceso DEFAULT DATE_TRUNC(CAST('2022-08-01' AS DATE), MONTH);
+DECLARE var_periodo_proceso DEFAULT DATE_TRUNC(CAST('2021-01-01' AS DATE), MONTH);
 
-CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.funnel_ventas_vitto`
+--CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.funnel_ventas_vitto`
+CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.funnel_ventas_cambios_vitto`
 AS
 WITH 
 t_producto AS (
@@ -60,7 +61,8 @@ t_tramite_nuevas_polizas_renov as (
 		ARRAY_AGG(t.id_producto ORDER BY t.mnt_prima_emitida_bruta_anualizada DESC)[OFFSET(0)] as id_producto,
 		ARRAY_AGG(SPLIT(t.numtramite,'-')[SAFE_OFFSET(ARRAY_LENGTH(SPLIT(t.numtramite, '-')) - 1)] ORDER BY t.mnt_prima_emitida_bruta_anualizada DESC)[OFFSET(0)] as id_cotizacion_journey
 	FROM 
-	      `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_vitto` t
+	      --`rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_vitto` t
+		  `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_cambios_vitto` t
 		  --`rs-nprd-dlk-dt-stg-msrl-d0d7.stg_modelo_operaciones.tramite` t
 	WHERE (LOWER(t.tipo_operacion) LIKE '%nueva%p%liza%' OR LOWER(t.tipo_operacion) LIKE 'renovaci%') -- nueva poliza o renovacion para la venta presentada
 		AND t.origen_data IN ('LOTUS','JOURNEY DIGITAL')
@@ -153,7 +155,8 @@ t_cot_mnt_data AS (
 		-- campo que almacena el valor 'JOURNEY DIGITAL' o 'LOTUS'
 		ARRAY_AGG(TRIM(UPPER(a.origen_tramite)) ORDER BY a.id_tramite DESC,a.id_cotizacion_origen DESC)[OFFSET(0)] AS origen_tramite
 	FROM 
-	     `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto` a
+	     --`rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto` a
+		 `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_cambio_vitto` a
 	    --`rs-nprd-dlk-dt-stg-msrl-d0d7.stg_modelo_prospeccion.cotizacion` a
 	WHERE TRIM(UPPER(a.origen_data)) IN ('JOURNEY','COTIZADOR WEB')
 	GROUP BY a.id_cotizacion_origen

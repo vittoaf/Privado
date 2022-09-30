@@ -1,7 +1,8 @@
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto`;
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto_anterior`;
 
-CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto`
+--CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto`
+CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_cambio_vitto`
 AS
 WITH persona_data AS (
 	SELECT 
@@ -157,6 +158,38 @@ tramites_hist_rentas AS (  --  Actualizar el intermediario para el caso de los t
       AND COALESCE( SAFE_CAST(thr.cod_sap_asesor_final AS NUMERIC) || '' , '') <> ''  -- que presente un codigo sap correcto
       AND thr.nro_tramite_solicitud <> 'PENDIENTE' 
 ),
+tramites_8202_8917_journeyexpress AS (
+--A PARTIR DEL 202106:
+--IDENTIFICAR TRAMITES DE PRODUCTO 8202 Y
+--IDENTIFICAR TRAMITES DE PRODUCTO 8917 QUE TENGAN AL MENOS UN TRAMITE EN GLOSA JOURNEY EXPRESS 
+SELECT 
+	trm.numtramite,pe.id_persona,trm.numpoliza,trm.CODPRODUCTO
+FROM `rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
+LEFT JOIN persona_data pe ON pe.num_documento = trm.DOCCLIENTE  AND TRIM(pe.tip_documento) = 'DNI'
+WHERE 
+ DATE_TRUNC(CAST(trm.FECCREACION AS DATE), MONTH) >= '2021-06-01' 
+ AND (
+ 		trm.codproducto||IFNULL(trm.doccliente,'0') in (
+   													Select codproducto||IFNULL(doccliente,'0') 
+													FROM `rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE`
+   													WHERE
+   													codproducto = '8917' AND glosa LIKE '%JOURNEY EXPRESS%'
+		 										) 
+ 		OR trm.codproducto = '8202'
+	)
+),
+Cotizacion8917 as (
+Select numpol_ext_cot,id_persona_cliente
+ from `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_cambio_vitto` 
+where id_producto_final = 'AX-8917'
+),
+tramites_8202_8917_journeyexpress_eliminar AS (
+	Select trm.numtramite 
+	FROM tramites_8202_8917_journeyexpress trm 
+	LEFT JOIN Cotizacion8917 c ON trm.numpoliza= c.numpol_ext_cot AND trm.id_persona=c.id_persona_cliente
+	where 
+		not (c.numpol_ext_cot is null and trm.numpoliza is not null and trm.codproducto='8917')
+),
 tramites_data AS (
 	SELECT
 		DATE_TRUNC(CAST(trm.FECCREACION AS DATE), MONTH) AS Periodo,
@@ -175,6 +208,14 @@ tramites_data AS (
 		--`rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
 		`rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
 	LEFT JOIN tramites_hist_rentas  thr ON ( thr.nro_tramite_solicitud = trm.numtramite )  --  tramites de rentas
+	LEFT JOIN tramites_8202_8917_journeyexpress_eliminar tje ON (tje.numtramite = trm.numtramite ) 
+	--nuevo filtro
+	where
+		tje.numtramite IS NULL
+	/*(case 
+		 	WHEN trm.codproducto = '8917' AND trm.glosa LIKE '%JOURNEY EXPRESS%' THEN 0
+  			WHEN trm.codproducto = '8202' THEN 0
+  			ELSE 1 END) = 1*/
 	GROUP BY 
 		DATE_TRUNC(CAST(trm.FECCREACION AS DATE), MONTH),
 		CASE 
@@ -471,7 +512,8 @@ final_cotizacion AS (
 			ON sfc.id_tramite IS NULL 
 				AND DATE_ADD(sfc.periodo, INTERVAL 2 MONTH) = sft.Periodo
 				AND sfc.id_intermediario = sft.id_intermediario
-				AND SAFE_CAST(TRIM(REGEXP_REPLACE(sfc.des_nro_doc_cliente,'[^0-9 ]','')) AS BIGINT)=SAFE_CAST(TRIM(REGEXP_REPLACE(sft.dni_cliente,'[^0-9 ]','')) AS BIGINT)
+				AND SAFE_CAST(TRIM(REGEXP_REPLACE(sfc.des_nro_doc_cliente,'[^0-9 ]','')) AS BIGINT)
+					=SAFE_CAST(TRIM(REGEXP_REPLACE(sft.dni_cliente,'[^0-9 ]','')) AS BIGINT)
 				AND SUBSTRING(sfc.id_producto_final,4,LENGTH(sfc.id_producto_final)) = sft.cod_producto
 )
 SELECT 

@@ -3,7 +3,7 @@
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_vitto`;
 --DROP TABLE IF EXISTS `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_vitto_anterior`;
 
-CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_vitto`
+CREATE OR REPLACE TABLE `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.tramite_cambios_vitto`
 AS
 WITH 
 NuevoCalendario as (
@@ -71,6 +71,44 @@ tramites_hist_rentas as (
 	  AND COALESCE( SAFE_CAST(thr.cod_sap_asesor_final AS NUMERIC) || '' , '') <> ''  -- que presente un codigo sap correcto
       AND thr.nro_tramite_solicitud <> 'PENDIENTE'
 ),
+tramites_8202_8917_journeyexpress AS(
+--A PARTIR DEL 202106:
+--IDENTIFICAR TRAMITES DE PRODUCTO 8202 Y
+--IDENTIFICAR TRAMITES DE PRODUCTO 8917 QUE TENGAN AL MENOS UN TRAMITE EN GLOSA JOURNEY EXPRESS 
+SELECT 
+trm.numtramite,
+pe.id_persona,
+trm.numpoliza,trm.CODPRODUCTO
+FROM `rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
+LEFT JOIN (SELECT 
+		a.id_persona,b.num_documento
+	FROM 
+		`rs-nprd-dlk-dd-stgz-8ece.stg_modelo_persona.persona` a
+		CROSS JOIN UNNEST (a.documento_identidad) b
+  where b.ind_documento_principal = '1' and TRIM(b.tip_documento) = 'DNI') pe ON pe.num_documento = trm.DOCCLIENTE 
+WHERE 
+ DATE_TRUNC(CAST(trm.FECCREACION AS DATE), MONTH) >= '2021-06-01' 
+ AND (
+ 		trm.codproducto||IFNULL(trm.doccliente,'0') in (
+   													Select codproducto||IFNULL(doccliente,'0') 
+													FROM `rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE`
+   													WHERE
+   													codproducto = '8917' AND glosa LIKE '%JOURNEY EXPRESS%'
+		 										) 
+ 		OR trm.codproducto = '8202')
+),
+Cotizacion8917 as (
+Select numpol_ext_cot,id_persona_cliente
+ from `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_cambio_vitto` 
+where id_producto_final = 'AX-8917'
+),
+tramites_8202_8917_journeyexpress_eliminar AS (
+	Select trm.numtramite 
+	FROM tramites_8202_8917_journeyexpress trm 
+	LEFT JOIN Cotizacion8917 c ON trm.numpoliza= c.numpol_ext_cot AND trm.id_persona=c.id_persona_cliente
+	where 
+		not (c.numpol_ext_cot is null and trm.numpoliza is not null and trm.codproducto='8917')
+),
 tmp_tramite AS (
 	SELECT 
 		trm.numtramite,
@@ -123,8 +161,13 @@ tmp_tramite AS (
 	FROM `rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
 	LEFT JOIN tramites_hist_rentas thr on ( thr.numtramite = trm.numtramite )  -- tramites historicos de rentas
 	LEFT JOIN producto_ax_data pro ON (pro.cod_producto=trim(trm.codproducto))
+	LEFT JOIN tramites_8202_8917_journeyexpress_eliminar tje ON (tje.numtramite = trm.numtramite )
 	WHERE 
-		1 = 1
+		tje.numtramite IS NULL
+		 /*(case 
+		 	WHEN trm.codproducto = '8917' AND trm.glosa LIKE '%JOURNEY EXPRESS%' THEN 0
+  			WHEN trm.codproducto = '8202' THEN 0
+  			ELSE 1 END) = 1*/
 	
 	UNION ALL
 	
@@ -161,7 +204,8 @@ tmp_tramite AS (
     cast(cot.des_estado_cotizacion as string) AS des_estado_solicitud,
     cast(null as string) AS id_persona_via,
     cast(null as string) AS id_sede_via
-	FROM `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto` cot
+	--FROM `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_vitto` cot
+	FROM `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_cambio_vitto` cot
 	LEFT JOIN persona_data per
 	ON (TRIM(cot.id_persona_cliente)=TRIM(per.id_persona))
 	LEFT JOIN producto_data pro
