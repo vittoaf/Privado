@@ -1,0 +1,50 @@
+1. Ejecutar ddl
+CREATE OR REPLACE TABLE `rs-shr-al-analyticsz-prj-ebc1.delivery_canales.cr_convenio_productividad`
+(
+  anio INT64,
+  periodo STRING,
+  canal STRING,
+  subcanal STRING,
+  id_corredor_agrupado STRING,
+  corredor_agrupado STRING,
+  ejecutivo STRING,
+  subgerencia STRING,
+  gerencia STRING,
+  categoria STRING,
+  id_poliza STRING,
+  id_producto STRING,
+  num_poliza STRING,
+  fec_ini_poliza DATE,
+  fec_anul_poliza DATE,
+  ind_poliza_fronting STRING,
+  ind_poliza_facultativa STRING,
+  contratante STRING,
+  ind_cuenta_estado STRING,
+  segmento STRING,
+  riesgo STRING,
+  ramo_contable STRING,
+  agrupacion_producto_n1 STRING,
+  agrupacion_producto_n2 STRING,
+  agrupacion_producto_n3 STRING,
+  producto STRING,
+  vta_nueva_stock STRING,
+  prima_contable NUMERIC,
+  fec_procesamiento DATE,
+  key_prod STRING,
+  max_periodo STRING,
+  fuente STRING
+)
+CLUSTER BY periodo,ejecutivo,corredor_agrupado
+
+2. Aprobar Merge
+	https://github.com/Rimac-Seguros/mica-migracion-canales-analytics/pull/74
+
+3. Ejecutar Jenkis de analytics produccion  
+	ANL:
+	http://172.29.113.232:10001/job/mica-GCP-migracion-canales-analytics-prod/
+
+4. Ejecutar dag
+	ue4_prod_com_gco_mica_002_dag_delivery_canales_corredores
+
+5. QA debe ejecutar sus querys de validacion correspondiente.
+SELECT count(1) FROM `rs-shr-al-analyticsz-prj-ebc1.delivery_canales.cr_convenio_productividad`;

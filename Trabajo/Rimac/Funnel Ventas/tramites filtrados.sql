@@ -143,3 +143,74 @@ select codproducto_final,origen_data,nro_doc_cliente,codproducto_final,id_estado
 ,des_estado_cotizacion,pago_flg,numpol,canal,periodo from
 `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.cotizacion_union_tmp_vitto`
 where nro_doc_cliente = '10064074'
+
+----
+
+
+WITH
+  aws AS (
+  SELECT
+    B.COD_SAP_FINAL,
+    COUNT(DISTINCT B.NRO_POLIZA_FINAL) cantidad,
+    (
+    SELECT
+      count (1)
+    FROM
+      `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.aws_bd_produccion` A
+    WHERE
+      MES_PRODUCCION = '202208'
+      AND FECHA_EMISION_SISTEMA IS NULL
+      AND A.COD_SAP_FINAL = B.COD_SAP_FINAL ) Fecha_Emision_Sistema_Nulo,
+    STRUCT(
+            ARRAY_AGG(IFNULL(B.NRO_TRAMITE,'')) AS nro_tramite,
+            ARRAY_AGG(IFNULL(B.NRO_POLIZA_FINAL,'')) AS numpol,
+            ARRAY_AGG(IFNULL(B.COD_PRODUCTO_FINAL,'')) AS Cod_producto,
+            ARRAY_AGG(IFNULL(p.id_persona,'')) AS id_persona,
+            ARRAY_AGG(IFNULL(B.NRO_DOC_CONTRATANTE_FINAL,'')) AS DNI
+    
+     )aws
+  FROM
+    `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.aws_bd_produccion` B
+    left join (
+            SELECT 
+		a.id_persona, 
+		b.tip_documento, 
+		b.num_documento, 
+		a.nom_completo
+	FROM 
+		`rs-nprd-dlk-dd-stgz-8ece.stg_modelo_persona.persona` a
+		CROSS JOIN UNNEST (a.documento_identidad) b
+    ) p on B.NRO_DOC_CONTRATANTE_FINAL = p.num_documento  and p.tip_documento in ('DNI','CE')
+  WHERE
+    B.MES_PRODUCCION = '202208'
+    AND B.FECHA_EMISION_SISTEMA >= '2022-08-01'
+    AND B.FECHA_EMISION_SISTEMA <= '2022-08-31'
+  GROUP BY
+    B.COD_SAP_FINAL),
+  gcp AS (
+  SELECT
+    bit_cod_sap_asesor,
+    COUNT(DISTINCT pol_id_poliza) cantidad,
+    STRUCT(ARRAY_AGG(IFNULL(pol_id_poliza,'')) AS id_poliza,
+      ARRAY_AGG(IFNULL(trm_id_tramite,'')) AS trm_id_tramite,
+      ARRAY_AGG(IFNULL(trm_id_producto,'')) AS trm_id_producto,
+      ARRAY_AGG(IFNULL(trm_id_contratante,'')) AS trm_id_contratante ) poliza
+  FROM
+    `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.funnel_ventas_cambios_vitto`
+  WHERE
+    trm_mes_produccion = "2022-08-01"
+    AND bit_des_subcanal = "FFVV VIDA"
+    AND bit_categoria <> "SIN DATOS"
+  GROUP BY
+    bit_cod_sap_asesor )
+SELECT
+  *
+FROM
+  aws
+FULL JOIN
+  gcp
+ON
+  aws.COD_SAP_FINAL = CAST(gcp.bit_cod_sap_asesor AS string)
+WHERE
+  gcp.cantidad <> aws.cantidad
+  AND gcp.cantidad > 0

@@ -208,7 +208,7 @@ tramites_data AS (
 		--`rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
 		`rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm
 	LEFT JOIN tramites_hist_rentas  thr ON ( thr.nro_tramite_solicitud = trm.numtramite )  --  tramites de rentas
-	LEFT JOIN tramites_8202_8917_journeyexpress_eliminar tje ON (tje.numtramite = trm.numtramite ) 
+	LEFT JOIN tramites_8202_8917_journeyexpress tje ON (tje.numtramite = trm.numtramite ) 
 	--nuevo filtro
 	where
 		tje.numtramite IS NULL

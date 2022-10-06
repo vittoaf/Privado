@@ -1,0 +1,74 @@
+{
+  "table_name": "rs-nprd-dlk-data-rwz-51a6:de__canales.metas_eerr",
+  "bigquery_mode": "WRITE_TRUNCATE",
+  "process_change_schema": "1",
+  "schema": [
+    {
+      "name": "MES",
+      "type": "integer",
+      "list_reg_expression": ""
+    },
+	{
+      "name": "FFVV",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+	{
+      "name": "ID_SUBCANAL",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "LIMA_PROVINCIA",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "LOCALIDAD",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "AGENCIA",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "UNIDAD",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "COD_SAP",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "NOMBRE",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "CARGO",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "INDICADOR",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "UNIDAD_META",
+      "type": "string",
+      "list_reg_expression": ""
+    },
+    {
+      "name": "META",
+      "type": "number",
+      "list_reg_expression": ""
+    }
+  ],
+  "sheet_name": "",
+  "include_header": true
+}

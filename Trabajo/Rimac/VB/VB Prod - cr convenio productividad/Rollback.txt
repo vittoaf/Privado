@@ -1,0 +1,9 @@
+1. Eliminar tabla 
+	DROP TABLE IF EXISTS `rs-shr-al-analyticsz-prj-ebc1.delivery_canales.cr_convenio_productividad`;
+2. Revertir Merge
+	https://github.com/Rimac-Seguros/mica-migracion-canales-analytics/pull/74
+3. Ejecutar Jenkis de analytics produccion  
+	ANL:
+	http://172.29.113.232:10001/job/mica-GCP-migracion-canales-analytics-prod/
+4. Ejecutar dag
+	ue4_prod_com_gco_mica_002_dag_delivery_canales_corredores

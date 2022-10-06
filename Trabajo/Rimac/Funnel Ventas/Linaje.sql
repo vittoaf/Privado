@@ -55,3 +55,19 @@ num_documento_cliente in ('76880202','46651226','77272512','42990024','41598962'
 Select * from `rs-nprd-dlk-dt-stg-mica-4de1.delivery_canales.funnel_ventas_cambios_vitto` 
 where trm_id_contratante = 'AX-10508507'
 and trm_id_producto =  'AX-8202';
+
+----
+SELECT 
+*
+FROM `rs-nprd-dlk-dd-rwz-a406.bdwf__appnote.TRAMITE` trm 
+where NUMTRAMITE IN ('SI5648722-01','SI5643449-01')
+
+SELECT 
+		a.id_persona, 
+		b.tip_documento, 
+		b.num_documento, 
+		a.nom_completo
+	FROM 
+		`rs-nprd-dlk-dd-stgz-8ece.stg_modelo_persona.persona` a
+		CROSS JOIN UNNEST (a.documento_identidad) b
+  where	a.id_persona = 'AX-6894024'
